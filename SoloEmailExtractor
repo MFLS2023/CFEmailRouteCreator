@@ -1,0 +1,155 @@
+(function(){
+  // --- 邮箱匹配正则 ---
+  const EMAIL_REGEX = /[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g;
+
+  // --- 创建覆盖层、文本框、按钮 ---
+  function createOverlay() {
+    const overlay = document.createElement("div");
+    overlay.id = "emailExtractorOverlay";
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+    overlay.style.zIndex = "999999";
+    overlay.style.display = "flex";
+    overlay.style.flexDirection = "column";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.padding = "20px";
+    overlay.style.boxSizing = "border-box";
+
+    const instructions = document.createElement("div");
+    instructions.textContent = "请将包含邮箱地址的完整文本粘贴到下面文本框中，然后点击【提取邮箱】。";
+    instructions.style.color = "#fff";
+    instructions.style.fontSize = "16px";
+    instructions.style.marginBottom = "10px";
+    instructions.style.textAlign = "center";
+    overlay.appendChild(instructions);
+
+    const textArea = document.createElement("textarea");
+    textArea.id = "emailExtractorInput";
+    textArea.style.width = "80%";
+    textArea.style.height = "40%";
+    textArea.style.fontSize = "14px";
+    textArea.style.padding = "10px";
+    textArea.style.boxSizing = "border-box";
+    textArea.style.borderRadius = "4px";
+    textArea.style.border = "1px solid #ccc";
+    overlay.appendChild(textArea);
+
+    const btnContainer = document.createElement("div");
+    btnContainer.style.marginTop = "10px";
+    overlay.appendChild(btnContainer);
+
+    const extractBtn = document.createElement("button");
+    extractBtn.textContent = "提取邮箱";
+    extractBtn.style.fontSize = "16px";
+    extractBtn.style.padding = "8px 16px";
+    extractBtn.style.cursor = "pointer";
+    btnContainer.appendChild(extractBtn);
+
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "关闭";
+    closeBtn.style.fontSize = "16px";
+    closeBtn.style.padding = "8px 16px";
+    closeBtn.style.cursor = "pointer";
+    closeBtn.style.marginLeft = "10px";
+    btnContainer.appendChild(closeBtn);
+
+    closeBtn.addEventListener("click", function(){
+      document.body.removeChild(overlay);
+    });
+
+    return { overlay, extractBtn, textArea };
+  }
+
+  // --- 提取邮箱并处理（完全去除出现多次的邮箱） ---
+  function extractEmails(text) {
+    const found = text.match(EMAIL_REGEX);
+    if (!found) {
+      return "";
+    }
+    // 清理：去除首尾空格，并转换为小写
+    const cleaned = found.map(email => email.trim().toLowerCase());
+    // 统计频率
+    const freq = {};
+    cleaned.forEach(email => {
+      freq[email] = (freq[email] || 0) + 1;
+    });
+    // 只保留出现一次的邮箱
+    const unique = cleaned.filter(email => freq[email] === 1);
+    return unique.join("\n");
+  }
+
+  // --- 在结果区域添加一键复制功能，并显示结果 ---
+  function createResultArea(resultText) {
+    const overlay = document.getElementById("emailExtractorOverlay");
+    overlay.innerHTML = "";
+
+    // 右上角的关闭按钮
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "关闭";
+    closeBtn.style.position = "absolute";
+    closeBtn.style.top = "20px";
+    closeBtn.style.right = "20px";
+    closeBtn.style.fontSize = "16px";
+    closeBtn.style.cursor = "pointer";
+    overlay.appendChild(closeBtn);
+    closeBtn.addEventListener("click", function(){
+      document.body.removeChild(overlay);
+    });
+
+    // 复制按钮
+    const copyBtn = document.createElement("button");
+    copyBtn.textContent = "复制结果";
+    copyBtn.style.fontSize = "16px";
+    copyBtn.style.padding = "6px 12px";
+    copyBtn.style.marginBottom = "10px";
+    copyBtn.style.cursor = "pointer";
+    overlay.appendChild(copyBtn);
+
+    // 结果区域
+    const resultDiv = document.createElement("div");
+    resultDiv.style.backgroundColor = "#f5f5f5";
+    resultDiv.style.padding = "20px";
+    resultDiv.style.borderRadius = "4px";
+    resultDiv.style.maxHeight = "80%";
+    resultDiv.style.overflowY = "auto";
+    resultDiv.style.fontSize = "14px";
+    resultDiv.style.whiteSpace = "pre-wrap";
+    resultDiv.textContent = resultText;
+    overlay.appendChild(resultDiv);
+
+    // 复制按钮事件
+    copyBtn.addEventListener("click", function(){
+      navigator.clipboard.writeText(resultText)
+        .then(() => { alert("结果已复制到剪贴板！"); })
+        .catch(() => { alert("复制失败，请手动复制。"); });
+    });
+  }
+
+  // --- 主流程：显示覆盖层，等待用户粘贴文本，然后提取邮箱 ---
+  function initEmailExtractor() {
+    const { overlay, extractBtn, textArea } = createOverlay();
+    document.body.appendChild(overlay);
+
+    extractBtn.addEventListener("click", function(){
+      const inputText = textArea.value;
+      if (!inputText) {
+        alert("文本框为空，请粘贴包含邮箱地址的文本。");
+        return;
+      }
+      const result = extractEmails(inputText);
+      if (!result) {
+        alert("未在文本中找到只出现一次的邮箱地址。");
+        return;
+      }
+      createResultArea(result);
+    });
+  }
+
+  // --- 启动脚本 ---
+  initEmailExtractor();
+})();
