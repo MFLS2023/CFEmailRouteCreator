@@ -72,7 +72,7 @@
 
 - 所有脚本均为一次性控制台工具，不需刷新页面即可反复执行；
 - 如遇页面结构变动导致脚本失效，可修改选择器或反馈 issue；
-- 请在目标地址已在下拉列表中的前提下使用 `CFEmailRouteCreator3`。
+- 请在目标地址已在下拉列表中的前提下使用 `CFEmailRouteCreator1`（推荐） 或 `CFEmailRouteCreator3`。
 
 ---
 
