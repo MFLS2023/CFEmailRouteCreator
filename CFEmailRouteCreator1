@@ -4,7 +4,7 @@
  * 默认情况下，本脚本在选择目标地址时调用 selectOption(0)，
  * 即选择下拉列表中第一个候选项。
  * 
- * 如果你希望选择其他候选项，请修改第154行代码 createSingleEmailRoute() 中的：
+ * 如果你希望选择其他候选项，请修改第 154 行代码 createSingleEmailRoute() 中的：
  * 
  *    await selectOption(0);
  * 
