@@ -3,7 +3,7 @@
 
 # 📬 CF Email Route Creator & Email Extractor 工具集
 
-> 一组基于浏览器控制台的自动化脚本，专为 Cloudflare Email Routing 页面设计，支持批量创建转发邮箱、提取唯一邮箱地址。无需安装插件，一键粘贴即用！
+> 一组基于浏览器控制台的自动化脚本，专为 Cloudflare Email Routing ( CF 域名邮箱）页面设计，支持批量创建转发邮箱、提取唯一邮箱地址。无需安装插件，一键粘贴即用！
 
 ---
 
