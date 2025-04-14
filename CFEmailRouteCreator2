@@ -1,0 +1,269 @@
+(function(){
+  // ========== 随机前缀生成（3～9个字母 + 3～5个数字） ==========
+  function generateEmailPrefix() {
+    const lettersLength = Math.floor(Math.random() * (9 - 3 + 1)) + 3;
+    const digitsLength = Math.floor(Math.random() * (5 - 3 + 1)) + 3;
+    const letters = Array.from({ length: lettersLength }, () =>
+      String.fromCharCode(Math.floor(Math.random() * 26) + 97)
+    ).join('');
+    const digits = Array.from({ length: digitsLength }, () =>
+      Math.floor(Math.random() * 10)
+    ).join('');
+    return letters + digits;
+  }
+
+  // ========== 辅助函数：睡眠 ==========
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // ========== 辅助函数：等待元素出现（并检查文本内容） ==========
+  async function waitForElementWithText(selector, text, parent = document, timeout = 5000) {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const elements = Array.from(parent.querySelectorAll(selector));
+      const element = elements.find(el => el.textContent && el.textContent.includes(text));
+      if (element) return element;
+      await sleep(100);
+    }
+    throw new Error(`等待元素 ${selector} 包含文本 "${text}" 超时`);
+  }
+
+  // ========== 辅助函数：等待元素出现（不检查内容） ==========
+  async function waitForElement(selector, timeout = 5000) {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const element = document.querySelector(selector);
+      if (element) return element;
+      await sleep(100);
+    }
+    throw new Error(`等待元素 ${selector} 超时`);
+  }
+
+  // ========== 模拟“原生”输入 ==========
+  function simulateInput(element, text) {
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    nativeInputValueSetter.call(element, text);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // ========== 模拟鼠标点击 ==========
+  function simulateMouseClick(element) {
+    element.click();
+  }
+
+  // ========== 选择下拉列表中的第二个选项 ==========
+  async function selectSecondOption() {
+    try {
+      console.log("【下拉选择】点击React Select组件打开下拉列表...");
+      // 根据实际情况调整容器选择器
+      const selectContainer = await waitForElement('.react-select-container');
+      simulateMouseClick(selectContainer);
+      console.log("【下拉选择】已点击Select容器，等待下拉列表显示");
+      await sleep(1000);
+
+      // 再次点击确保下拉菜单打开
+      simulateMouseClick(selectContainer);
+      console.log("【下拉选择】再次点击Select容器");
+      await sleep(1000);
+
+      console.log("【下拉选择】等待下拉选项出现...");
+      let maxAttempts = 10, attempt = 0, optionsFound = false;
+      while (!optionsFound && attempt < maxAttempts) {
+        attempt++;
+        const selectors = [
+          '.react-select__option', 
+          '.react-select__menu-list > div',
+          '[role="option"]'
+        ];
+        for (const selector of selectors) {
+          const options = document.querySelectorAll(selector);
+          if (options.length > 1) {
+            console.log(`【下拉选择】找到 ${options.length} 个下拉选项`);
+            console.log("【下拉选择】选择第二个选项...");
+            simulateMouseClick(options[1]);
+            console.log("【下拉选择】已点击第二个选项");
+            optionsFound = true;
+            break;
+          }
+        }
+        if (!optionsFound) {
+          console.log(`【下拉选择】尝试 ${attempt}/${maxAttempts}: 未找到下拉选项，尝试触发键盘事件...`);
+          const inputElement = document.querySelector('.react-select__input');
+          if (inputElement) {
+            inputElement.focus();
+            inputElement.dispatchEvent(new KeyboardEvent('keydown', { 
+              key: 'ArrowDown', 
+              code: 'ArrowDown', 
+              keyCode: 40, 
+              bubbles: true 
+            }));
+          }
+          await sleep(500);
+        }
+      }
+      if (!optionsFound) {
+        console.warn("【下拉选择】无法找到或选择下拉选项，后续操作可能受影响");
+      }
+      await sleep(1000);
+      return true;
+    } catch (error) {
+      console.error("选择下拉选项时出错:", error.message);
+      throw error;
+    }
+  }
+
+  // ========== 创建单个邮件路由 ==========
+  async function createSingleEmailRoute() {
+    try {
+      // 等待并点击“创建地址”按钮
+      const createButton = await waitForElementWithText('button', '创建地址', document, 5000);
+      console.log("【邮件路由】点击创建地址按钮...");
+      simulateMouseClick(createButton);
+      await sleep(1500);
+
+      // 填写自定义地址前缀
+      console.log("【邮件路由】正在填写邮箱前缀...");
+      const prefix = generateEmailPrefix();
+      const customInput = await waitForElement('input[name="customAddress"]');
+      simulateInput(customInput, prefix);
+      console.log(`【邮件路由】使用前缀: ${prefix}`);
+      await sleep(800);
+
+      // 选择目标地址——调用下拉列表选择第二个选项
+      await selectSecondOption();
+
+      // 下拉后等待一段时间，再次获取 input 检查是否丢失前缀，若丢失则重新填写
+      await sleep(500);
+      const customAfter = document.querySelector('input[name="customAddress"]');
+      if (!customAfter.value || customAfter.value !== prefix) {
+        console.warn("【邮件路由】下拉选择后自定义地址丢失，重新输入前缀...");
+        simulateInput(customAfter, prefix);
+        await sleep(500);
+      }
+
+      // 点击保存按钮
+      console.log("【邮件路由】正在查找保存按钮...");
+      const allButtons = Array.from(document.querySelectorAll('button'));
+      const saveButton = allButtons.find(button => button.textContent && button.textContent.includes("保存"));
+      if (!saveButton) {
+        throw new Error("无法找到保存按钮");
+      }
+      console.log("【邮件路由】点击保存按钮...");
+      simulateMouseClick(saveButton);
+      console.log("【邮件路由】等待保存操作完成...");
+      await sleep(2000);
+      return prefix;
+    } catch (error) {
+      console.error("创建邮件路由时出错:", error.message);
+      throw error;
+    }
+  }
+
+  // ========== 主函数：创建多个邮件路由 ==========
+  async function createEmailRoutes() {
+    // 询问创建数量
+    const count = parseInt(prompt("请输入要创建的邮箱数量:", "5"));
+    if (!count || isNaN(count)) {
+      alert("输入无效，请重试!");
+      return;
+    }
+    // 询问邮箱后缀（域名），例如：example.com 或 @example.com
+    let suffix = prompt("请输入邮箱后缀（例如：example.com 或 @example.com）:", "example.com");
+    if (!suffix) {
+      alert("邮箱后缀不能为空！");
+      return;
+    }
+    if (!suffix.startsWith("@")) {
+      suffix = "@" + suffix;
+    }
+  
+    console.log(`【主流程】准备创建 ${count} 个邮箱, 邮箱后缀为：${suffix}`);
+    console.log("--------------------");
+  
+    const createdEmails = [];
+    let successCount = 0;
+    const MAX_RETRIES = 3;
+  
+    for (let i = 0; i < count; i++) {
+      let retryCount = 0, success = false;
+      while (!success && retryCount < MAX_RETRIES) {
+        try {
+          console.log(`【主流程】开始创建第 ${i+1}/${count} 个邮箱${retryCount > 0 ? ` (重试 ${retryCount})` : ''}...`);
+          // 每轮前等待“创建地址”按钮出现，确保页面处于初始状态
+          await waitForElementWithText('button', '创建地址', document, 5000);
+          const prefix = await createSingleEmailRoute();
+          createdEmails.push(prefix);
+          successCount++;
+          console.log(`【主流程】✅ 第 ${i+1}/${count} 个邮箱创建成功: ${prefix}`);
+          success = true;
+        } catch (error) {
+          retryCount++;
+          if (retryCount < MAX_RETRIES) {
+            console.warn(`【主流程】⚠️ 创建第 ${i+1} 个邮箱失败，准备重试 (${retryCount}/${MAX_RETRIES})...`);
+            await sleep(3000);
+          } else {
+            console.error(`【主流程】❌ 创建第 ${i+1} 个邮箱失败，已达最大重试次数:`, error);
+          }
+        }
+      }
+      console.log("--------------------");
+      await sleep(1000);
+    }
+  
+    // 输出创建报告及完整邮箱列表（以代码块形式显示在控制台，同时在页面右上角生成 textarea 供复制）
+    console.log("==== 创建完成报告 ====");
+    console.log(`总计尝试: ${count} 个`);
+    console.log(`成功创建: ${successCount} 个`);
+    console.log(`失败数量: ${count - successCount} 个`);
+  
+    if (createdEmails.length > 0) {
+      console.log("【报告】成功创建的邮箱前缀：");
+      createdEmails.forEach((email, index) => {
+        console.log(`${index + 1}. ${email}`);
+      });
+      // 拼接完整邮箱列表
+      const fullEmails = createdEmails.map(prefix => prefix + suffix);
+      console.log("\n【报告】完整邮箱列表：\n```");
+      fullEmails.forEach(email => console.log(email));
+      console.log("```");
+      // 同时，在页面右上角创建一个 textarea 显示结果，方便复制纯净文本
+      displayResultInTextArea("完整邮箱列表：\n" + fullEmails.join('\n'));
+    }
+  
+    console.log("====================");
+    if (successCount === count) {
+      console.log("【主流程】✅ 全部创建成功!");
+    } else if (successCount > 0) {
+      console.log("【主流程】⚠️ 部分创建成功!");
+    } else {
+      console.log("【主流程】❌ 全部创建失败!");
+    }
+  }
+
+  // ========== 在页面中创建一个 textarea 显示结果 ==========
+  function displayResultInTextArea(text) {
+    // 若已有则移除旧的
+    const oldTa = document.getElementById("emailResultTA");
+    if (oldTa) oldTa.remove();
+    const ta = document.createElement('textarea');
+    ta.id = "emailResultTA";
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '10px';
+    ta.style.right = '10px';
+    ta.style.width = '300px';
+    ta.style.height = '200px';
+    ta.style.zIndex = 9999;
+    ta.style.fontSize = '14px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    console.log("【报告】完整邮箱列表已显示在页面右上角的文本框中，方便复制纯净内容。");
+  }
+
+  // ========== 执行主函数 ==========
+  createEmailRoutes();
+})();
+
