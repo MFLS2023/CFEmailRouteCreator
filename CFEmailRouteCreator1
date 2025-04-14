@@ -1,3 +1,18 @@
+/**
+ * 邮箱路由创建脚本
+ * 
+ * 默认情况下，本脚本在选择目标地址时调用 selectOption(0)，
+ * 即选择下拉列表中第一个候选项。
+ * 
+ * 如果你希望选择其他候选项，请修改第154行代码 createSingleEmailRoute() 中的：
+ * 
+ *    await selectOption(0);
+ * 
+ * 将 0 改为其他数字，例如：
+ * - selectOption(1) 选择下拉列表中的第二个选项（下标1）；
+ * - selectOption(2) 选择第三个选项（下标2），以此类推。
+ */
+
 (function(){
   // ========== 随机前缀生成（3～9个字母 + 3～5个数字） ==========
   function generateEmailPrefix() {
@@ -29,7 +44,7 @@
     throw new Error(`等待元素 ${selector} 包含文本 "${text}" 超时`);
   }
 
-  // ========== 辅助函数：等待元素出现（不检查内容） ==========
+  // ========== 辅助函数：等待元素出现（不检查文本） ==========
   async function waitForElement(selector, timeout = 5000) {
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
@@ -56,19 +71,18 @@
   // ========== 选择下拉列表中的指定选项 ==========
   /**
    * 选择下拉列表中的某个选项。
-   * @param {number} optionIndex - 要选择的选项索引（下标从 0 开始）。默认值为 0，即选择第一个选项。
-   * 若需选择第二个选项，则调用 selectOption(1) 。
+   * @param {number} optionIndex - 要选择的选项索引（下标从 0 开始）。默认值为 0，即选择第一个候选项。
+   * 若要选择其它选项，则修改调用该函数时传入的参数值。
    */
   async function selectOption(optionIndex = 0) {
     try {
       console.log("【下拉选择】点击React Select组件打开下拉列表...");
-      // 根据实际情况调整容器选择器
       const selectContainer = await waitForElement('.react-select-container');
       simulateMouseClick(selectContainer);
       console.log("【下拉选择】已点击Select容器，等待下拉列表显示");
       await sleep(1000);
 
-      // 再次点击以确保下拉菜单打开
+      // 再次点击以确保下拉菜单展开
       simulateMouseClick(selectContainer);
       console.log("【下拉选择】再次点击Select容器");
       await sleep(1000);
@@ -86,7 +100,7 @@
           const options = document.querySelectorAll(selector);
           if (options.length > optionIndex) {
             console.log(`【下拉选择】找到 ${options.length} 个下拉选项`);
-            console.log(`【下拉选择】选择索引为 ${optionIndex} 的选项（默认第一个选项，下标0）...`);
+            console.log(`【下拉选择】选择索引为 ${optionIndex} 的选项（例如，传入1将选择第二个候选项）...`);
             simulateMouseClick(options[optionIndex]);
             console.log("【下拉选择】目标选项已点击");
             optionsFound = true;
@@ -94,7 +108,7 @@
           }
         }
         if (!optionsFound) {
-          console.log(`【下拉选择】尝试 ${attempt}/${maxAttempts}: 未找到目标下拉选项，尝试触发键盘事件...`);
+          console.log(`【下拉选择】尝试 ${attempt}/10: 未找到目标下拉选项，尝试触发键盘事件...`);
           const inputElement = document.querySelector('.react-select__input');
           if (inputElement) {
             inputElement.focus();
@@ -136,11 +150,10 @@
       console.log(`【邮件路由】使用前缀: ${prefix}`);
       await sleep(800);
 
-      // 选择目标地址 —— 这里默认选择第一个选项（optionIndex = 0）
-      await selectOption(2); 
-      // 若你想选择其他选项，比如第二个选项，请修改上面的参数为 1。
+      // 选择目标地址 —— 默认调用 selectOption(0) 选择第一个候选项
+      await selectOption(0);
 
-      // 下拉后等待一段时间，再次检查 input 内容，若值丢失则重新填写
+      // 下拉后等待一段时间，再次检查 input 内是否仍有前缀，若丢失则重新填写
       await sleep(500);
       const customAfter = document.querySelector('input[name="customAddress"]');
       if (!customAfter.value || customAfter.value !== prefix) {
@@ -175,7 +188,7 @@
       alert("输入无效，请重试!");
       return;
     }
-    // 询问邮箱后缀（域名），例如：example.com 或 @example.com
+    // 询问邮箱后缀（例如：example.com 或 @example.com）
     let suffix = prompt("请输入邮箱后缀（例如：example.com 或 @example.com）:", "example.com");
     if (!suffix) {
       alert("邮箱后缀不能为空！");
@@ -197,7 +210,7 @@
       while (!success && retryCount < MAX_RETRIES) {
         try {
           console.log(`【主流程】开始创建第 ${i+1}/${count} 个邮箱${retryCount > 0 ? ` (重试 ${retryCount})` : ''}...`);
-          // 每轮前等待“创建地址”按钮出现，确保页面处于初始状态
+          // 每次创建前等待“创建地址”按钮出现，确保页面处于初始状态
           await waitForElementWithText('button', '创建地址', document, 5000);
           const prefix = await createSingleEmailRoute();
           createdEmails.push(prefix);
@@ -218,7 +231,7 @@
       await sleep(1000);
     }
   
-    // 输出创建报告及完整邮箱列表（以代码块形式显示在控制台，同时在页面右上角创建 textarea 以方便复制纯净文本）
+    // 输出创建报告及完整邮箱列表
     console.log("==== 创建完成报告 ====");
     console.log(`总计尝试: ${count} 个`);
     console.log(`成功创建: ${successCount} 个`);
@@ -234,7 +247,7 @@
       console.log("\n【报告】完整邮箱列表：\n```");
       fullEmails.forEach(email => console.log(email));
       console.log("```");
-      // 同时，在页面右上角创建一个 textarea 显示结果，方便复制纯净文本
+      // 同时，在页面右上角创建一个 textarea 显示结果，便于复制纯净文本
       displayResultInTextArea("完整邮箱列表：\n" + fullEmails.join('\n'));
     }
   
@@ -248,7 +261,7 @@
     }
   }
   
-  // ========== 在页面中创建一个 textarea 显示结果，便于复制纯净文本 ==========
+  // ========== 在页面中创建一个 textarea 显示结果 ==========
   function displayResultInTextArea(text) {
     const oldTa = document.getElementById("emailResultTA");
     if (oldTa) oldTa.remove();
