@@ -65,9 +65,6 @@
 
 ![image](https://github.com/user-attachments/assets/dd3db931-4d43-4ce4-9a03-68e406617181)
 
-```
-
-</details>
 
 ---
 
